@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ARC NEXUS | Corrected RPC & Gas</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: radial-gradient(circle at 20% 30%, #0a0f2a, #03050c);
+            font-family: 'Courier New', 'Fira Code', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+        .glass-panel {
+            max-width: 820px;
+            width: 100%;
+            background: rgba(12, 20, 30, 0.65);
+            backdrop-filter: blur(12px);
+            border-radius: 2.5rem;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,255,255,0.1);
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #fff, #2affff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            border-left: 3px solid #2affff;
+            padding-left: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .sub {
+            color: #8da3c0;
+            font-size: 0.75rem;
+            border-bottom: 1px dashed rgba(42,255,255,0.3);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .network-card {
+            background: rgba(0,15,25,0.6);
+            border-radius: 1.5rem;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border: 1px solid #2affff40;
+        }
+        .network-card code {
+            display: block;
+            background: #021116;
+            padding: 6px 12px;
+            border-radius: 1rem;
+            margin: 6px 0;
+            color: #9effff;
+            word-break: break-all;
+        }
+        button {
+            background: linear-gradient(135deg, #0a1f2a, #021016);
+            border: 1px solid #2affff80;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 12px 20px;
+            border-radius: 3rem;
+            width: 100%;
+            color: #2affff;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 1rem;
+            text-transform: uppercase;
+        }
+        button:hover:not(:disabled) {
+            background: #0f2e3e;
+            border-color: #0ff;
+            box-shadow: 0 0 14px #0ff;
+            transform: scale(0.98);
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status-panel {
+            background: rgba(2,17,22,0.7);
+            border-radius: 1.2rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-left: 4px solid #2affff;
+            font-size: 0.8rem;
+        }
+        .error-panel { border-left-color: #ff3a6f; background: rgba(42,10,20,0.7); color: #ffb3c6; }
+        .success-panel { border-left-color: #0fa; background: rgba(10,42,26,0.7); color: #b3ffd9; }
+        .contract-card {
+            background: rgba(0,20,25,0.7);
+            border-radius: 1.5rem;
+            padding: 1.2rem;
+            margin-top: 1.5rem;
+            border: 1px solid #2affff40;
+            display: none;
+        }
+        .contract-card.show { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        .data-row { margin: 1rem 0; }
+        .data-label { color: #6ab0de; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; }
+        .data-value {
+            background: #010c12;
+            padding: 0.6rem;
+            border-radius: 1rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            margin-top: 6px;
+            border: 1px solid #2affff60;
+            color: #bfeaff;
+        }
+        input {
+            width: 100%;
+            background: #010c12;
+            border: 1px solid #2affff80;
+            color: #0ff;
+            font-family: monospace;
+            padding: 10px;
+            border-radius: 2rem;
+            margin: 8px 0;
+        }
+        .flex-buttons { display: flex; gap: 12px; margin-top: 8px; }
+        .flex-buttons button { margin-top: 0; flex: 1; }
+        hr { border-color: #2affff40; margin: 1rem 0; }
+        .footer { font-size: 0.7rem; text-align: center; margin-top: 2rem; color: #6b8c9c; }
+        a { color: #2affff; text-decoration: none; }
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(42,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #0ff;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        blink { animation: blink 1s infinite; }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<div class="glass-panel">
+    <h1>> ARC::NEXUS [FIXED]</h1>
+    <div class="sub">HTTPS RPC · ultra‑high gas · post‑deploy verification</div>
+    <div class="network-card">
+        <strong>🔗 CORRECT NETWORK DETAILS (MANUAL ADD)</strong>
+        <code>Network name  : Arc Testnet</code>
+        <code>RPC URL      : https://rpc.testnet.arc.network</code>
+        <code>Chain ID     : 5042002</code>
+        <code>Currency     : USDC</code>
+        <code>Explorer     : https://testnet.arcscan.app</code>
+        <span style="font-size:11px;">⚠️ DELETE any existing ARC network from MetaMask first, then add using above.</span>
+    </div>
+    <button id="connectBtn">⛓️ CONNECT WALLET</button>
+    <div id="statusArea" class="status-panel" style="display: none;"></div>
+    <button id="deployBtn" disabled>📡 DEPLOY STORAGE CONTRACT</button>
+    <button id="resetBtn" style="background:#1f2a2a; border-color:#ffaa33; color:#ffaa33;">⟳ FORCE RESET</button>
+    <div id="contractPanel" class="contract-card">
+        <div class="data-row"><div class="data-label">› contract address</div><div class="data-value" id="contractAddr">—</div></div>
+        <div class="data-row"><div class="data-label">› stored value</div><div class="data-value" id="storedValue">—</div></div>
+        <div class="data-row"><label>✎ store new number</label><input type="number" id="newNumber" value="42">
+            <div class="flex-buttons"><button id="storeBtn">💾 STORE</button><button id="retrieveBtn">🔄 RETRIEVE</button><button id="verifyBtn">🔍 VERIFY</button></div>
+        </div>
+    </div>
+    <div class="footer">⚡ deploy gas: 8,000,000 | store gas: 2,000,000 | gasPrice: 250 Gwei<br>💰 testnet USDC → <a href="https://faucet.circle.com/" target="_blank">faucet.circle.com</a><br><blink>_</blink> contract code verified after deployment</div>
+</div>
+
+<script>
+    // Storage contract ABI & bytecode (same as before)
+    const CONTRACT_ABI = ["function store(uint256 x) public","function retrieve() public view returns (uint256)"];
+    const CONTRACT_BYTECODE = "0x608060405234801561001057600080fd5b5061017b806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610059575b600080fd5b610043610075565b60405161005091906100dd565b60405180910390f35b610073600480360381019061006e91906100f8565b61007e565b005b60008054905090565b8060008190555050565b6000819050919050565b61009b81610088565b82525050565b60006020820190506100b66000830184610092565b92915050565b600080fd5b6100ca81610088565b81146100d557600080fd5b50565b60006020820190506100f26000830184610092565b92915050565b60006020828403121561010e5761010d6100bc565b5b600061011c848285016100c1565b9150509291505056fea2646970667358221220b5e37b8a0d6b7721e6f22dcf47d1a4b2d82e03ed474f728a3842aae6deaa0e5b64736f6c634300081e0033";
+
+    let signer = null, contract = null;
+    const connectBtn = document.getElementById('connectBtn');
+    const deployBtn = document.getElementById('deployBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusDiv = document.getElementById('statusArea');
+    const contractPanel = document.getElementById('contractPanel');
+    const contractAddrSpan = document.getElementById('contractAddr');
+    const storedValueSpan = document.getElementById('storedValue');
+    const storeBtn = document.getElementById('storeBtn');
+    const retrieveBtn = document.getElementById('retrieveBtn');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const newNumberInput = document.getElementById('newNumber');
+
+    function showStatus(msg, type = 'info') {
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = msg;
+        statusDiv.className = 'status-panel';
+        if (type === 'error') statusDiv.classList.add('error-panel');
+        else if (type === 'success') statusDiv.classList.add('success-panel');
+        else statusDiv.classList.remove('error-panel', 'success-panel');
+    }
+
+    async function checkNetworkAndBalance() {
+        if (!window.ethereum) return { ok: false, error: 'MetaMask not installed' };
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const network = await provider.getNetwork();
+        if (Number(network.chainId) !== 5042002) {
+            return { ok: false, error: `Wrong network (Chain ID ${network.chainId}). Please add/switch to ARC Testnet using the details above (HTTPS RPC).` };
+        }
+        const accounts = await provider.listAccounts();
+        if (accounts.length === 0) return { ok: false, error: 'No account connected.' };
+        const balance = await provider.getBalance(accounts[0].address);
+        if (balance === 0n) return { ok: false, error: 'Zero USDC. Get testnet USDC from faucet.circle.com' };
+        return { ok: true, balance: ethers.formatEther(balance), address: accounts[0].address, provider };
+    }
+
+    connectBtn.onclick = async () => {
+        if (!window.ethereum) { alert('Install MetaMask'); return; }
+        connectBtn.disabled = true;
+        connectBtn.innerHTML = '<span class="spinner"></span> CONNECTING...';
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            await provider.send('eth_requestAccounts', []);
+            const check = await checkNetworkAndBalance();
+            if (!check.ok) { showStatus(check.error, 'error'); connectBtn.disabled = false; connectBtn.innerHTML = '⛓️ CONNECT WALLET'; return; }
+            signer = await provider.getSigner();
+            const addr = await signer.getAddress();
+            showStatus(`✅ Connected to ARC Testnet (${addr.slice(0,6)}...)<br>💰 Balance: ${check.balance} USDC`, 'success');
+            connectBtn.disabled = true;
+            connectBtn.innerHTML = '✓ CONNECTED';
+            deployBtn.disabled = false;
+        } catch (err) {
+            showStatus(`Connection error: ${err.message}`, 'error');
+            connectBtn.disabled = false;
+            connectBtn.innerHTML = '⛓️ CONNECT WALLET';
+        }
+    };
+
+    async function deployNewContract() {
+        if (!signer) { showStatus('Connect wallet first.', 'error'); return false; }
+        const netCheck = await checkNetworkAndBalance();
+        if (!netCheck.ok) { showStatus(netCheck.error, 'error'); return false; }
+        deployBtn.disabled = true;
+        deployBtn.innerHTML = '<span class="spinner"></span> DEPLOYING (8M gas)...';
+        try {
+            const factory = new ethers.ContractFactory(CONTRACT_ABI, CONTRACT_BYTECODE, signer);
+            const instance = await factory.deploy({
+                gasPrice: ethers.parseUnits("250", "gwei"),
+                gasLimit: 8000000
+            });
+            const tx = instance.deploymentTransaction();
+            showStatus(`⏳ TX sent: ${tx.hash}<br>Waiting for receipt (up to 2 min)...`);
+            const receipt = await tx.wait();
+            if (receipt.status !== 1) throw new Error(`Deployment transaction reverted. Check explorer.`);
+            const addr = await instance.getAddress();
+            // VERIFY code exists and retrieve works
+            const code = await signer.provider.getCode(addr);
+            if (code === '0x' || code.length < 100) throw new Error('No contract bytecode found at address.');
+            await instance.retrieve();  // test call
+            contract = instance;
+            contractAddrSpan.innerText = addr;
+            const val = await contract.retrieve();
+            storedValueSpan.innerText = val.toString();
+            contractPanel.classList.add('show');
+            storeBtn.disabled = false;
+            retrieveBtn.disabled = false;
+            showStatus(`✅ DEPLOYMENT SUCCESS!<br>📄 ${addr}<br>🔗 <a href="https://testnet.arcscan.app/tx/${tx.hash}" target="_blank" style="color:#0f0">View tx</a>`, 'success');
+            return true;
+        } catch (err) {
+            let msg = err.message || err;
+            if (msg.includes('insufficient funds')) msg = 'INSUFFICIENT USDC – get testnet USDC from faucet.circle.com';
+            else if (msg.includes('code')) msg = 'Deployment succeeded but contract code missing – try again with higher gas limit (already 8M).';
+            showStatus(`❌ DEPLOYMENT FAILED: ${msg}`, 'error');
+            return false;
+        } finally {
+            deployBtn.disabled = false;
+            deployBtn.innerHTML = '📡 DEPLOY STORAGE CONTRACT';
+        }
+    }
+
+    deployBtn.onclick = deployNewContract;
+
+    resetBtn.onclick = () => {
+        contract = null;
+        contractPanel.classList.remove('show');
+        showStatus('Hard reset done. Deploy a fresh contract.', 'info');
+    };
+
+    storeBtn.onclick = async () => {
+        if (!contract) { showStatus('No contract deployed. Use DEPLOY.', 'error'); return; }
+        const val = parseInt(newNumberInput.value, 10);
+        if (isNaN(val)) return;
+        storeBtn.disabled = true;
+        storeBtn.innerHTML = '<span class="spinner"></span> STORING...';
+        try {
+            const tx = await contract.store(val, { gasPrice: ethers.parseUnits("250", "gwei"), gasLimit: 2000000 });
+            showStatus(`⏳ Storing ${val}... (${tx.hash})`);
+            const receipt = await tx.wait();
+            if (receipt.status !== 1) throw new Error('Store reverted');
+            const newVal = await contract.retrieve();
+            storedValueSpan.innerText = newVal.toString();
+            showStatus(`✓ Stored ${newVal}`, 'success');
+        } catch (err) {
+            let msg = err.message || err;
+            if (msg.includes('reverted')) msg = 'Store reverted – contract may be corrupted. Use FORCE RESET and redeploy.';
+            showStatus(`❌ Store failed: ${msg.slice(0,200)}`, 'error');
+        } finally {
+            storeBtn.disabled = false;
+            storeBtn.innerHTML = '💾 STORE';
+        }
+    };
+
+    retrieveBtn.onclick = async () => {
+        if (!contract) { showStatus('No contract deployed.', 'error'); return; }
+        retrieveBtn.disabled = true;
+        retrieveBtn.innerHTML = '<span class="spinner"></span> RETRIEVING...';
+        try {
+            const val = await contract.retrieve();
+            storedValueSpan.innerText = val.toString();
+            showStatus(`Retrieved: ${val}`, 'success');
+        } catch (err) {
+            let msg = err.message || err;
+            if (msg.includes('missing revert data')) msg = 'Contract corrupted (no retrieve function). Use FORCE RESET and redeploy.';
+            showStatus(`Retrieve error: ${msg.slice(0,180)}`, 'error');
+        } finally {
+            retrieveBtn.disabled = false;
+            retrieveBtn.innerHTML = '🔄 RETRIEVE';
+        }
+    };
+
+    verifyBtn.onclick = async () => {
+        if (!contract) { showStatus('No contract address.', 'error'); return; }
+        const addr = await contract.getAddress();
+        const code = await signer.provider.getCode(addr);
+        if (code === '0x') showStatus(`❌ No code at ${addr} – contract not deployed.`, 'error');
+        else showStatus(`✅ Code exists at ${addr} (length ${code.length})`, 'success');
+    };
+
+    if (window.ethereum) {
+        window.ethereum.on('chainChanged', () => window.location.reload());
+        window.ethereum.on('accountsChanged', () => window.location.reload());
+    }
+</script>
+</body>
+</html>
